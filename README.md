@@ -97,21 +97,55 @@ This section shows how to create and use the Docker container image for this lib
 It is not strictly needed, but it ensures an environment in which dependencies have the correct version, and in which it is guaranteed that the library works correctly.
 This Docker image can be built from the `Dockerfile` at the root folder of this repository by using:
 ```shell
-docker build -t amllibrary .
+IMG_NAME=amllibrary
+IMG_TAG=23.05.03
+docker build -t ${IMG_NAME}:${IMG_TAG} .
 ```
 (You might need to add `sudo` if Docker requires root permissions on your machine.)
 To run a container and mount a volume which includes the root folder of this repository, please use:
 ```shell
-docker run --name aml --rm -v $(pwd):/aMLLibrary -it amllibrary
+docker run --name aml --rm -v $(pwd):/aMLLibrary -it ${IMG_NAME}:${IMG_TAG}
 ```
 which defaults to a `bash` terminal unless a specific command is appended to the line.
 In this terminal, you may run the same commands as in a regular terminal, including the ones from the [Tutorial](#tutorial) section.
 
 **Note:** when using web services, remind to make the internal address and port visible from outside the container, by running:
 ```
-docker run --name aml --rm -v $(pwd):/aMLLibrary -it -p 8888:8888 amllibrary
+docker run --name aml --rm -v $(pwd):/aMLLibrary -it -p 8888:8888 ${IMG_NAME}:${IMG_TAG}
 ```
 
+## Kubernetes
+
+After having built the docker image as explained in the 
+[previous section](#docker-image), and possibly published it in a suitable 
+docker registry, the aMLLibrary can be deployed in a Kubernetes cluster by 
+exploiting the configuration files provided in [k8s](k8s). Specifically, 
+[kustomize](https://kustomize.io) is used to automatically generate:
+* a local volume called `aml-ws-vol` (see [amllibrary-vol.yaml](k8s/amllibrary-vol.yaml)) 
+where the regressor files generated or used for prediction should be stored. Note that 
+this volume mounts the local directory `/mnt/local_volumes_here/volume_to_share`; 
+edit to choose a different path
+* a persistent volume claim called `aml-ws-claim` (see 
+[amllibrary-pvc.yaml](k8s/amllibrary-pvc.yaml)) to link the volume to the 
+aMLLibrary deployment
+* a deployment called `aml-ws-deployment` (see 
+[amllibrary-deployment.yaml](k8s/amllibrary-deployment.yaml)) that mounts 
+the local volume into `/mnt` and runs the [web_service.py](web_service.py) 
+file starting the web service described [above](#web-services).
+* a service called `aml-ws-service` (see 
+[amllibrary-service.yaml](k8s/amllibrary-service.yaml)) that exposes port 8888 
+to the Kubernetes cluster.
+
+Note that the url and port used in the Kubernetes service (and therefore required 
+when defining applications that should call the web service) are defined in a 
+configmap called `aml-ws-config` with the values specified in 
+[config.properties](k8s/config.properties).
+
+To generate all the aforementioned components, it is enough to run:
+
+```
+kubectl apply -k k8s
+```
 
 ## Hyperopt
 This library is integrated with the Hyperopt package for hyperparameter tuning via Bayesian Optimization.

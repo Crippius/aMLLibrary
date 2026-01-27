@@ -2,6 +2,7 @@
 Copyright 2019 Marco Lattuada
 Copyright 2021 Bruno Guindani
 Copyright 2022 Nahuel Coliva
+Copyright 2025 Federica Filippini
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -164,9 +165,10 @@ class ModelBuilding:
         results.collect_data()
         self._logger.info("---Collected")
 
-        for signature, mapes in results.raw_results.items():
-            for experiment_configuration, mape in mapes.items():
-                self._logger.debug("%s: MAPE on %s set is %f", signature, experiment_configuration, mape)
+        for signature, metrics in results.raw_results.items():
+            metric = metrics[results.metric]
+            for experiment_configuration, val in metric.items():
+                self._logger.debug("%s: %s on %s set is %f", signature, results.metric, experiment_configuration, val)
 
         best_confs, best_technique = results.get_bests()
         results.dismiss_handler()
@@ -231,7 +233,10 @@ class ModelBuilding:
                     self._logger.debug("Wrapped: "+str(exp._wrapped_experiment_configuration.get_x_columns()))
 
             printed_name = str(technique).ljust(padding)
-            self._logger.info("---%s: MAPE %f - RMSE %f - R^2 %f", printed_name, best_conf.mapes["validation"], best_conf.rmses["validation"], best_conf.r2s["validation"])
+            printed_metrics = []
+            for metric, metric_vals in best_conf.metrics.items():
+                printed_metrics.append(f"{metric} {float(metric_vals['validation'])}")
+            self._logger.info("---%s: %s", printed_name, " - ".join(printed_metrics))
 
             # Build the regressor with all data
             hypers = best_conf._wrapped_experiment_configuration._hyperparameters if best_conf.is_wrapper() else best_conf._hyperparameters

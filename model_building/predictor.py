@@ -1,5 +1,6 @@
 """
 Copyright 2021 Bruno Guindani
+Copyright 2025 Federica Filippini
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,12 +20,13 @@ import os
 import pickle
 import sys
 import pandas as pd
+import json
 
 import custom_logger
 import sequence_data_processing
 import data_preparation.data_loading
 import data_preparation.onehot_encoding
-from model_building.experiment_configuration import mean_absolute_percentage_error
+from model_building.metrics import Metrics
 
 
 class Predictor(sequence_data_processing.SequenceDataProcessing):
@@ -59,8 +61,11 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
         self._done_file_flag = os.path.join(output_folder, 'done')
 
         # Read regressor if given
-        if regressor_file:
-            self.load_regressor(regressor_file)
+        self._regressor_file = regressor_file
+        self._regressor = None
+
+        # Initialize class to compute metrics
+        self.metrics = Metrics()
 
 
     def load_regressor(self, regressor_file):
@@ -87,14 +92,6 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
         regressor_file: str
             Pickle binary file that stores the model to be used for prediction
         """
-        if regressor_file:
-            self.load_regressor(regressor_file)
-
-        # Read configuration from the file indicated by the argument
-        if not os.path.exists(config_file):
-            self._logger.error("%s does not exist", config_file)
-            sys.exit(-1)
-
         # Check if output path already exist
         if os.path.exists(self._output_folder) and os.path.exists(self._done_file_flag):
             self._logger.error("%s already exists. Terminating the program...", self._output_folder)
@@ -117,6 +114,18 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
             print('Unrecognized type for configuration file: '+str(type(config_file)))
             sys.exit(1)
 
+        # Load regressor
+        if regressor_file:
+            self._regressor_file = regressor_file
+        if not self._regressor or regressor_file:
+            if 'keras_backend' in self._campaign_configuration['General']:
+                backend = self._campaign_configuration['General'].get('keras_backend', 'tensorflow')
+                os.environ['KERAS_BACKEND'] = backend
+                os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+                os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+                import keras
+            self.load_regressor(self._regressor_file)
+        
         # Read data
         self._logger.info("-->Executing data load")
         data_loader = data_preparation.data_loading.DataLoading(self._campaign_configuration)
@@ -145,13 +154,12 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
         self._logger.info("Saved to %s", str(yy_file))
 
         # Compute and output MAPE
-        mape = mean_absolute_percentage_error(yy, yy_pred)
-        self._logger.info("---MAPE = %s", str(mape))
+        metrics = self.metrics.compute_metrics(yy, yy_pred)
+        self._logger.info("---MAPE = %s", str(metrics["MAPE"]))
         if mape_to_file:
-          mape_file = os.path.join(self._output_folder, 'mape.txt')
+          mape_file = os.path.join(self._output_folder, 'metrics.json')
           with open(mape_file, 'w') as f:
-            f.write(str(mape))
-            f.write('\n')
+            f.write(json.dumps(metrics, indent = 2))
           self._logger.info("Saved MAPE to %s", str(mape_file))
 
         self._logger.info("<--Performed prediction")
