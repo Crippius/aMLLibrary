@@ -1,6 +1,7 @@
 """
 Copyright 2019 Marco Lattuada
 Copyright 2022 Nahuel Coliva
+Copyright 2026 Tommaso Crippa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +23,7 @@ import data_preparation.column_selection
 import data_preparation.ernest
 import data_preparation.inversion
 import data_preparation.logarithm
+import data_preparation.onehot_encoding
 import data_preparation.product
 import data_preparation.rename_columns
 import regression_inputs
@@ -102,6 +104,26 @@ class Regressor:
         if '_logger' in temp_d:
             temp_d['_logger'] = custom_logger.getLogger(temp_d['_logger'])
         self.__dict__.update(temp_d)
+
+    def get_true_y(self, df):
+        """
+        Extract the true y values from a dataframe for evaluation purposes.
+
+        For tabular regressors this simply returns the y
+        column as-is. MTSRegressor overrides this to apply windowing first so
+        that the returned y values are aligned with the windowed predictions.
+
+        Parameters
+        ----------
+        df: pandas.DataFrame
+            Full dataframe including the y column
+
+        Returns
+        -------
+        pandas.Series
+            The true target values
+        """
+        return df[self._campaign_configuration['General']['y']]
 
     def predict(self, inputs):
         """

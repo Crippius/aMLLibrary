@@ -4,6 +4,7 @@ Main module of the library
 Copyright 2019 Marjan Hosseini
 Copyright 2019 Marco Lattuada
 Copyright 2021 Bruno Guindani
+Copyright 2026 Tommaso Crippa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +25,7 @@ import configparser as cp
 import logging
 import os
 import pandas as pd
+import pickle
 import pprint
 import random
 import shutil
@@ -43,9 +45,12 @@ import data_preparation.onehot_encoding
 import data_preparation.product
 import data_preparation.rename_columns
 import data_preparation.row_selection
+import data_preparation.temporal_windowing
+import data_preparation.window_feature_extraction
 import data_preparation.xgboost_feature_selection
 
 import model_building.model_building
+import mts_regressor
 
 
 class SequenceDataProcessing:
@@ -159,7 +164,7 @@ class SequenceDataProcessing:
             sys.exit(1)
 
         # Check that if HoldOut is selected, hold_out_ratio is specified
-        if self._campaign_configuration['General']['validation'] == "HoldOut" or self._campaign_configuration['General']['hp_selection'] == "HoldOut":
+        if self._campaign_configuration['General']['validation'] == "HoldOut" or self._campaign_configuration['General'].get('hp_selection') == "HoldOut":
             if "hold_out_ratio" not in self._campaign_configuration['General']:
                 self._logger.error("hold_out_ratio not set")
                 sys.exit(1)
@@ -204,6 +209,11 @@ class SequenceDataProcessing:
 
         # Adding read on input to data preprocessing step
         self._data_preprocessing_list.append(data_preparation.data_loading.DataLoading(self._campaign_configuration))
+
+        # Adding time series windowing if time_column is configured
+        if 'time_column' in self._campaign_configuration.get('DataPreparation', {}):
+            self._data_preprocessing_list.append(data_preparation.temporal_windowing.TemporalWindowing(self._campaign_configuration))
+            self._data_preprocessing_list.append(data_preparation.window_feature_extraction.WindowFeatureExtraction(self._campaign_configuration))
 
         # Adding column renaming if required
         if 'rename_columns' in self._campaign_configuration['DataPreparation']:
@@ -342,6 +352,14 @@ class SequenceDataProcessing:
         data_processing.data.to_csv(os.path.join(self._campaign_configuration['General']['output'], 'data_preprocessed.csv'))
 
         regressor = self._model_building.process(self._campaign_configuration, data_processing, int(self._campaign_configuration['General']['j']))
+
+        # Wrap in MTSRegressor when time series mode is active and re-save the pickle
+        if 'time_column' in self._campaign_configuration.get('DataPreparation', {}):
+            regressor = mts_regressor.MTSRegressor.from_regressor(regressor)
+            self._logger.info("Wrapped regressor as MTSRegressor for time series inference")
+            best_pickle_path = os.path.join(self._campaign_configuration['General']['output'], 'best.pickle')
+            with open(best_pickle_path, 'wb') as pickle_file:
+                pickle.dump(regressor, pickle_file, protocol=4)
 
         end = time.time()
         execution_time = str(end - start)

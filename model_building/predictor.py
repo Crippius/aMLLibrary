@@ -136,8 +136,9 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
 
         # Start prediction
         self._logger.info("-->Performing prediction")
-        yy = self.data[self._campaign_configuration['General']['y']]
-        xx = self.data.drop(columns=[self._campaign_configuration['General']['y']])
+        y_col = self._campaign_configuration['General']['y']
+        yy = self._regressor.get_true_y(self.data)
+        xx = self.data.drop(columns=[y_col]) if y_col in self.data.columns else self.data
         yy_pred = self._regressor.predict(xx)
 
         # Write predictions to file
