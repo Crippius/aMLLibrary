@@ -67,15 +67,17 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                     original_cols.append(base)
                     seen.add(base)
 
-        new_df = pd.DataFrame(index=df.index)
+        columns_dict: dict = {}
 
         for col in original_cols:
             step_cols = [f'{col}_step_{i}' for i in range(window_size)]
-            vals = df[step_cols].values 
-            self._add_features(new_df, col, vals, window_size, features)
+            vals = df[step_cols].values
+            self._add_features(columns_dict, col, vals, window_size, features)
 
         if y_col in df.columns:
-            new_df[y_col] = df[y_col].values
+            columns_dict[y_col] = df[y_col].values
+
+        new_df = pd.DataFrame(columns_dict, index=df.index)
 
         new_x_cols = [c for c in new_df.columns if c != y_col]
 
@@ -103,49 +105,49 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                 out[feat_name].append(params)
         return out
 
-    def _add_features(self, new_df, col, vals, window_size, features):
+    def _add_features(self, out: dict, col, vals, window_size, features):
         for feat_name, params in features.items():
-            self._dispatch(new_df, col, vals, window_size, feat_name, params)
+            self._dispatch(out, col, vals, window_size, feat_name, params)
 
-    def _dispatch(self, new_df, col, vals, window_size, feat_name, params):
+    def _dispatch(self, out: dict, col, vals, window_size, feat_name, params):
         if feat_name == 'mean':
-            new_df[f'{col}_mean'] = vals.mean(axis=1)
+            out[f'{col}_mean'] = vals.mean(axis=1)
 
         elif feat_name == 'standard_deviation':
-            new_df[f'{col}_standard_deviation'] = vals.std(axis=1)
+            out[f'{col}_standard_deviation'] = vals.std(axis=1)
 
         elif feat_name == 'minimum':
-            new_df[f'{col}_minimum'] = vals.min(axis=1)
+            out[f'{col}_minimum'] = vals.min(axis=1)
 
         elif feat_name == 'maximum':
-            new_df[f'{col}_maximum'] = vals.max(axis=1)
+            out[f'{col}_maximum'] = vals.max(axis=1)
 
         elif feat_name == 'range':
-            new_df[f'{col}_range'] = vals.max(axis=1) - vals.min(axis=1)
+            out[f'{col}_range'] = vals.max(axis=1) - vals.min(axis=1)
 
         elif feat_name == 'slope':
-            new_df[f'{col}_slope'] = self._simple_slope(vals, window_size)
+            out[f'{col}_slope'] = self._simple_slope(vals, window_size)
 
         elif feat_name == 'skewness':
             from scipy.stats import skew
-            new_df[f'{col}_skewness'] = skew(vals, axis=1)
+            out[f'{col}_skewness'] = np.nan_to_num(skew(vals, axis=1), nan=0.0)
 
         elif feat_name == 'kurtosis':
             from scipy.stats import kurtosis
-            new_df[f'{col}_kurtosis'] = kurtosis(vals, axis=1)
+            out[f'{col}_kurtosis'] = np.nan_to_num(kurtosis(vals, axis=1), nan=0.0)
 
         elif feat_name == 'quantile':
             for p in (params or []):
                 q = p['q']
                 label = str(q).rstrip('0').rstrip('.') if '.' in str(q) else str(q)
-                new_df[f'{col}_quantile_{label}'] = np.quantile(vals, q, axis=1)
+                out[f'{col}_quantile_{label}'] = np.nanquantile(vals, q, axis=1)
 
         elif feat_name == 'autocorrelation':
             for p in (params or []):
                 f_agg = p['f_agg']
                 maxlag = p['maxlag']
                 result = self._autocorrelation(vals, f_agg, maxlag)
-                new_df[f'{col}_autocorrelation_{f_agg}_{maxlag}'] = result
+                out[f'{col}_autocorrelation_{f_agg}_{maxlag}'] = result
 
         elif feat_name == 'linear_trend':
             for p in (params or []):
@@ -153,7 +155,7 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                 chunk_len = p['chunk_len']
                 f_agg = p['f_agg']
                 result = self._linear_trend(vals, window_size, attr, chunk_len, f_agg)
-                new_df[f'{col}_linear_trend_{attr}_{chunk_len}_{f_agg}'] = result
+                out[f'{col}_linear_trend_{attr}_{chunk_len}_{f_agg}'] = result
 
         else:
             self._logger.warning("Unknown window feature '%s' - skipped", feat_name)
@@ -179,7 +181,8 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
         ac_lags = []
         for lag in range(1, maxlag + 1):
             numerator = (centered[:, lag:] * centered[:, :vals.shape[1] - lag]).sum(axis=1)
-            ac = np.where(variance > 0, numerator / variance, 0.0)
+            with np.errstate(invalid='ignore', divide='ignore'):
+                ac = np.where(variance > 0, numerator / variance, 0.0)
             ac_lags.append(ac)
 
         ac_matrix = np.stack(ac_lags, axis=1)  # (n, maxlag)
