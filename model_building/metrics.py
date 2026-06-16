@@ -1,6 +1,7 @@
 """
 Copyright 2019 Marco Lattuada
 Copyright 2025 Federica Filippini
+Copyright 2026 Tommaso Crippa
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss, root_mean_squared_error
 import numpy as np
 
 
@@ -35,10 +36,10 @@ class Metrics:
               "comp": (lambda x,y : x < y)  # lower is better
             }, 
             "RMSE": {
-              "func": mean_squared_error,
-              "attributes": {"squared": False},
+              "func": root_mean_squared_error,
+              "attributes": {},
               "comp": (lambda x,y : x < y)  # lower is better
-            }, 
+            },
             "R^2": {
               "func": r2_score,
               "attributes": {},
@@ -51,9 +52,9 @@ class Metrics:
             }, 
             "MSE": {
               "func": mean_squared_error,
-              "attributes": {"squared": True},
+              "attributes": {},
               "comp": (lambda x,y : x < y)  # lower is better
-            }, 
+            },
             "QL": {
               "func": mean_pinball_loss,
               "attributes": {"alpha": quantile},
