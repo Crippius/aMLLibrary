@@ -35,12 +35,13 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                   single-key dict (parameterized feature):
 
             ['mean', 'standard_deviation', 'minimum', 'maximum', 'range',
-             'slope', 'skewness', 'kurtosis',
+             'slope', 'skewness', 'kurtosis', 'absolute_sum_of_changes',
              {'quantile': {'q': 0.05}},
              {'quantile': {'q': 0.25}},
              {'autocorrelation': {'f_agg': 'mean',   'maxlag': 3}},
              {'autocorrelation': {'f_agg': 'median', 'maxlag': 3}},
              {'linear_trend': {'attr': 'slope', 'chunk_len': 5, 'f_agg': 'mean'}},
+             {'agg_linear_trend': {'attr': ['slope', 'intercept'], 'chunk_len': [2, 5], 'f_agg': 'mean'}},
             ]
 
     """
@@ -156,6 +157,19 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                 f_agg = p['f_agg']
                 result = self._linear_trend(vals, window_size, attr, chunk_len, f_agg)
                 out[f'{col}_linear_trend_{attr}_{chunk_len}_{f_agg}'] = result
+
+        elif feat_name == 'agg_linear_trend':
+            for p in (params or []):
+                attrs = p['attr'] if isinstance(p['attr'], list) else [p['attr']]
+                chunk_lens = p['chunk_len'] if isinstance(p['chunk_len'], list) else [p['chunk_len']]
+                f_agg = p.get('f_agg', 'mean')
+                for attr in attrs:
+                    for chunk_len in chunk_lens:
+                        result = self._linear_trend(vals, window_size, attr, chunk_len, f_agg)
+                        out[f'{col}_agg_linear_trend_{attr}_{chunk_len}_{f_agg}'] = result
+
+        elif feat_name == 'absolute_sum_of_changes':
+            out[f'{col}_absolute_sum_of_changes'] = np.abs(np.diff(vals, axis=1)).sum(axis=1)
 
         else:
             self._logger.warning("Unknown window feature '%s' - skipped", feat_name)
