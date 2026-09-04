@@ -16,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss
+from sklearn.metrics import accuracy_score, f1_score
 import numpy as np
 
 
@@ -35,9 +36,21 @@ def root_mean_squared_error(y_true, y_pred):
     return mean_squared_error(y_true, y_pred) ** 0.5
 
 
+def to_labels(y):
+    return np.asarray(y).ravel().astype(int)
+
+
+def accuracy(y_true, y_pred):
+    return accuracy_score(to_labels(y_true), to_labels(y_pred))
+
+
+def f1(y_true, y_pred):
+    return f1_score(to_labels(y_true), to_labels(y_pred), zero_division=0)
+
+
 class Metrics:
-    def __init__(self, quantile: float = 0.5):
-        self._metrics_dict = {
+    def __init__(self, quantile: float = 0.5, task: str = 'regression'):
+        regression_metrics = {
             "MAPE": {
               "func": mean_absolute_percentage_error,
               "attributes": {},
@@ -69,7 +82,21 @@ class Metrics:
               "comp": (lambda x,y : x < y)  # lower is better
             }
         }
-    
+        classification_metrics = {
+            "Accuracy": {
+              "func": accuracy,
+              "attributes": {},
+              "comp": (lambda x,y : x > y)  # greater is better
+            },
+            "F1": {
+              "func": f1,
+              "attributes": {},
+              "comp": (lambda x,y : x > y)  # greater is better
+            }
+        }
+        self.task = task
+        self._metrics_dict = classification_metrics if task == "classification" else regression_metrics
+
     def compute_metric(self, metric, real_y, predicted_y):
         if metric in self._metrics_dict:
             return self._metrics_dict[metric]["func"](real_y, predicted_y, **self._metrics_dict[metric]["attributes"])

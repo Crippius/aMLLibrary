@@ -86,7 +86,7 @@ class Results:
         self._campaign_configuration = campaign_configuration
         self.techniques = campaign_configuration['General']['techniques']
         self.metric = campaign_configuration['General']['metric']
-        self._metrics_calculator = Metrics()
+        self._metrics_calculator = Metrics(task=campaign_configuration['General'].get('task', 'regression'))
         self._comparison_operator = self._metrics_calculator.get_comparison_operator(self.metric)
         self._exp_confs = exp_confs
         self.raw_results: Dict[str, Dict[str, Dict]] = {}

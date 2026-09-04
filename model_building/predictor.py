@@ -114,6 +114,9 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
             print('Unrecognized type for configuration file: '+str(type(config_file)))
             sys.exit(1)
 
+        task = self._campaign_configuration['General'].get('task', 'regression')
+        self.metrics = Metrics(task=task)
+
         # Load regressor
         if regressor_file:
             self._regressor_file = regressor_file
@@ -154,9 +157,10 @@ class Predictor(sequence_data_processing.SequenceDataProcessing):
             yy_both.to_csv(f, index=False)
         self._logger.info("Saved to %s", str(yy_file))
 
-        # Compute and output MAPE
+        # Compute and output metric
         metrics = self.metrics.compute_metrics(yy, yy_pred)
-        self._logger.info("---MAPE = %s", str(metrics["MAPE"]))
+        main_metric = self._campaign_configuration['General'].get('metric', 'F1') if task == 'classification' else "MAPE"
+        self._logger.info("---%s = %s", main_metric, str(metrics[main_metric]))
         if mape_to_file:
           mape_file = os.path.join(self._output_folder, 'metrics.json')
           with open(mape_file, 'w') as f:
