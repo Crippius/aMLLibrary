@@ -67,7 +67,8 @@ class Normalization(dp.DataPreparation):
         data = inputs
 
         to_be_normalized = inputs.x_columns.copy()
-        to_be_normalized.append(inputs.y_column)
+        if self._campaign_configuration['General'].get('task', 'regression') != 'classification':
+            to_be_normalized.append(inputs.y_column)
 
         filtered_data = inputs.data.iloc[inputs.inputs_split["training"], :]
         # filtered_data = inputs.data

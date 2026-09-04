@@ -214,9 +214,17 @@ class SequenceDataProcessing:
                 self._logger.error("normalization cannot be used with ernest")
                 sys.exit(1)
         
-        # Check that the required metric for comparison is valid
-        if self._campaign_configuration['General']['metric'] not in ["MAPE", "RMSE", "R^2", "MAE", "MSE", "QL"]:
-            self._logger.error("Invalid metric: %s. The accepted values are: MAPE, RMSE, R^2, MAE, MSE", self._campaign_configuration['General']['metric'])
+        # Check that the required task is valid
+        task = self._campaign_configuration['General']['task']
+        if task not in ["regression", "classification"]:
+            self._logger.error("Invalid task: %s. The accepted values are: regression, classification", task)
+            sys.exit(1)
+
+        # Check that the required metric for comparison is valid for the task at hand
+        accepted_metrics = ["Accuracy", "F1"] if task == "classification" else ["MAPE", "RMSE", "R^2", "MAE", "MSE", "QL"]
+        if self._campaign_configuration['General']['metric'] not in accepted_metrics:
+            self._logger.error("Invalid metric: %s. The accepted values for %s are: %s",
+                               self._campaign_configuration['General']['metric'], task, ", ".join(accepted_metrics))
             sys.exit(1)
 
         # Adding read on input to data preprocessing step
@@ -310,8 +318,13 @@ class SequenceDataProcessing:
             self._campaign_configuration['General']['run_num'] = 1
         if 'seed' not in self._campaign_configuration['General']:
             self._campaign_configuration['General']['seed'] = 0
+        if 'task' not in self._campaign_configuration['General']:
+            self._campaign_configuration['General']['task'] = "regression"
         if 'metric' not in self._campaign_configuration['General']:
-            self._campaign_configuration['General']['metric'] = "MAPE"
+            if self._campaign_configuration['General']['task'] == "classification":
+                self._campaign_configuration['General']['metric'] = "F1"
+            else:
+                self._campaign_configuration['General']['metric'] = "MAPE"
 
     def process(self):
         """
