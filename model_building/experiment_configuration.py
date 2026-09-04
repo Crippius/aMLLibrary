@@ -36,7 +36,7 @@ import custom_logger  # noqa: E402
 
 class Technique(Enum):
     """
-    Enum class listing the different regression techniques
+    Enum class listing the different techniques
     """
     NONE = 0
     LR_RIDGE = 1
@@ -49,6 +49,9 @@ class Technique(Enum):
     DUMMY = 8
     NEURAL_NETWORK = 9
     QR = 10
+    LR_LOGISTIC = 11
+    RF_CLASSIFIER = 12
+    XGBOOST_CLASSIFIER = 13
 
 
 enum_to_configuration_label = {Technique.LR_RIDGE: 'LRRidge', Technique.XGBOOST: 'XGBoost',
@@ -56,7 +59,10 @@ enum_to_configuration_label = {Technique.LR_RIDGE: 'LRRidge', Technique.XGBOOST:
                                Technique.SVR: 'SVR', Technique.NNLS: 'NNLS',
                                Technique.STEPWISE: 'Stepwise', Technique.DUMMY: 'Dummy',
                                Technique.NEURAL_NETWORK: 'NeuralNetwork',
-                               Technique.QR: 'QuantileRegression'}
+                               Technique.QR: 'QuantileRegression',
+                               Technique.LR_LOGISTIC: 'LogisticRegression',
+                               Technique.RF_CLASSIFIER: 'RandomForestClassifier',
+                               Technique.XGBOOST_CLASSIFIER: 'XGBoostClassifier'}
 
 
 class ExperimentConfiguration(abc.ABC):
@@ -195,7 +201,7 @@ class ExperimentConfiguration(abc.ABC):
         self._regression_inputs = regression_inputs.copy()
         self._signature = self._compute_signature(prefix)
         self._logger = custom_logger.getLogger(self.get_signature_string())
-        self._metrics_calculator = Metrics()
+        self._metrics_calculator = Metrics(task=self._campaign_configuration['General'].get('task', 'regression'))
         self.metrics = {m: {} for m in self._metrics_calculator.supported_metrics()}
         self._regressor = None
         self.trained = False

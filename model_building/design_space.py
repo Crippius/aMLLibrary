@@ -32,12 +32,15 @@ import data_preparation.xgboost_feature_selection
 import model_building.decision_tree_experiment_configuration as dt
 import model_building.dummy_experiment_configuration as du
 import model_building.experiment_configuration as ec
+import model_building.logistic_regression_experiment_configuration as logr
 import model_building.lr_ridge_experiment_configuration as lr
 import model_building.neural_network_experiment_configuration as nene
 import model_building.nnls_experiment_configuration as nnls
+import model_building.random_forest_classifier_experiment_configuration as rfc
 import model_building.random_forest_experiment_configuration as rf
 import model_building.stepwise_experiment_configuration as sw
 import model_building.svr_experiment_configuration as svr
+import model_building.xgboost_classifier_experiment_configuration as xgbc
 import model_building.xgboost_experiment_configuration as xgb
 import model_building.wrapper_experiment_configuration as wec
 import model_building.quantile_regression_experiment_configuration as qr
@@ -318,6 +321,15 @@ class TechniqueExpConfsGenerator(ExpConfsGenerator):
             elif self._technique == ec.Technique.QR:
                 point = qr.QuantileRegressionExperimentConfiguration(self._campaign_configuration, hyperparams_point_values,
                                                                     regression_inputs, prefix)
+            elif self._technique == ec.Technique.LR_LOGISTIC:
+                point = logr.LogisticRegressionExperimentConfiguration(self._campaign_configuration, hyperparams_point_values,
+                                                                      regression_inputs, prefix)
+            elif self._technique == ec.Technique.RF_CLASSIFIER:
+                point = rfc.RandomForestClassifierExperimentConfiguration(self._campaign_configuration, hyperparams_point_values,
+                                                                          regression_inputs, prefix)
+            elif self._technique == ec.Technique.XGBOOST_CLASSIFIER:
+                point = xgbc.XGBoostClassifierExperimentConfiguration(self._campaign_configuration, hyperparams_point_values,
+                                                                      regression_inputs, prefix)
             else:
                 self._logger.error("Not supported regression technique")
                 sys.exit(-1)
