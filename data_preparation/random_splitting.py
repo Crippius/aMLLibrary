@@ -73,7 +73,25 @@ class RandomSplitting(data_preparation.data_preparation.DataPreparation):
         data = inputs
 
         assert data.inputs_split["training"]
-        validation_size = int(float(len(data.inputs_split["training"])) * self._campaign_configuration['General']['hold_out_ratio'])
+        hold_out_ratio = self._campaign_configuration['General']['hold_out_ratio']
+
+        # Windowed time series with a series_id_column: hold out whole series, never split
+        # a series across sets, otherwise overlapping windows leak between train and validation
+        if data.groups is not None:
+            starting_rows = list(data.inputs_split[self._starting_set])
+            row_group = data.groups.loc[starting_rows]
+            unique_groups = sorted(set(row_group))
+            n_groups = len(unique_groups)
+            n_pick = min(max(1, round(hold_out_ratio * n_groups)), n_groups - 1)
+            chosen = set(self._random_generator.sample(unique_groups, n_pick))
+            data.inputs_split[self._new_set] = [r for r in starting_rows if row_group.loc[r] in chosen]
+            data.inputs_split[self._starting_set] = [r for r in starting_rows if row_group.loc[r] not in chosen]
+            self._logger.info("RandomSplitting: grouped hold-out for '%s' - %d/%d series (%d/%d windows) held out; series=%s",
+                              self._new_set, n_pick, n_groups,
+                              len(data.inputs_split[self._new_set]), len(starting_rows), sorted(chosen))
+            return data
+
+        validation_size = int(float(len(data.inputs_split["training"])) * hold_out_ratio)
 
         data.inputs_split[self._new_set] = self._random_generator.sample(data.inputs_split[self._starting_set], validation_size)
         data.inputs_split[self._starting_set] = list(set(data.inputs_split[self._starting_set]) - set(data.inputs_split[self._new_set]))

@@ -89,7 +89,9 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
             len(new_x_cols), len(new_df),
         )
 
-        return regression_inputs.RegressionInputs(new_df, inputs.inputs_split, new_x_cols, y_col)
+        result = regression_inputs.RegressionInputs(new_df, inputs.inputs_split, new_x_cols, y_col)
+        result.groups = inputs.groups
+        return result
 
     def _normalize_features(self, raw):
         """Return a canonical dict {feature_name: None | list_of_param_dicts}."""

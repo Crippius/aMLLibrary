@@ -957,6 +957,38 @@ class KFoldExpConfsGenerator(SelectionValidationExpConfsGenerator):
             self._logger.error("Too few samples to perform %d-Fold", self._k)
             sys.exit(1)
 
+        second_set = "validation" if self._is_validation else "hp_selection"
+
+        # Windowed time series with a series_id_column: fold on whole series so that no
+        # series is split across training and testing folds (overlapping windows would leak)
+        if regression_inputs.groups is not None:
+            all_training_idx = list(regression_inputs.inputs_split["training"])
+            row_group = regression_inputs.groups.loc[all_training_idx]
+            unique_groups = sorted(set(row_group))
+            if len(unique_groups) < self._k:
+                self._logger.error("Too few series (%d) to perform %d-Fold grouped cross-validation",
+                                   len(unique_groups), self._k)
+                sys.exit(1)
+            shuffled = self._random_generator.sample(unique_groups, len(unique_groups))
+            fold_groups = [set(shuffled[i::self._k]) for i in range(self._k)]
+            self._logger.info("KFoldExpConfsGenerator: grouped %d-Fold over %d series for '%s' set",
+                              self._k, len(unique_groups), second_set)
+
+            return_list = []
+            for fold in range(0, self._k):
+                fold_prefix = copy.copy(prefix)
+                fold_prefix.append("f" + str(fold))
+                fold_regression_inputs = regression_inputs.copy()
+                test_groups = fold_groups[fold]
+                fold_testing_idx = [r for r in all_training_idx if row_group.loc[r] in test_groups]
+                fold_training_idx = [r for r in all_training_idx if row_group.loc[r] not in test_groups]
+                fold_regression_inputs.inputs_split["training"] = fold_training_idx
+                fold_regression_inputs.inputs_split[second_set] = fold_testing_idx
+                self._logger.info("  fold %d: %d series / %d windows held out", fold, len(test_groups), len(fold_testing_idx))
+                return_list.extend(self._kfold_generators[fold].generate_experiment_configurations(fold_prefix, fold_regression_inputs))
+            self._logger.debug("<--")
+            return return_list
+
         return_list = []
         dataset_size = len(regression_inputs.inputs_split["training"])
         fold_size = int(dataset_size / self._k)
@@ -980,7 +1012,6 @@ class KFoldExpConfsGenerator(SelectionValidationExpConfsGenerator):
             fold_training_idx = all_training_idx - fold_testing_idx
             remaining = remaining - fold_testing_idx
             fold_regression_inputs.inputs_split["training"] = list(fold_training_idx)
-            second_set = "validation" if self._is_validation else "hp_selection"
             fold_regression_inputs.inputs_split[second_set] = list(fold_testing_idx)
             return_list.extend(self._kfold_generators[fold].generate_experiment_configurations(fold_prefix, fold_regression_inputs))
             self._logger.debug("<--")

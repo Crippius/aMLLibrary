@@ -169,6 +169,18 @@ class SequenceDataProcessing:
                 self._logger.error("hold_out_ratio not set")
                 sys.exit(1)
 
+        # Warn about window leakage when windowing single-series data with a random split
+        dp_cfg = self._campaign_configuration.get('DataPreparation', {})
+        if 'time_column' in dp_cfg and 'series_id_column' not in dp_cfg:
+            if self._campaign_configuration['General']['validation'] in ("HoldOut", "KFold") \
+               or self._campaign_configuration['General']['hp_selection'] in ("HoldOut", "KFold"):
+                self._logger.warning("Time-series windowing with no 'series_id_column': %s/%s will split "
+                                     "overlapping windows at random, leaking information between train and "
+                                     "validation. Use 'validation = All' / 'hp_selection = All', or add a "
+                                     "'series_id_column' for leakage-free grouped splitting.",
+                                     self._campaign_configuration['General']['validation'],
+                                     self._campaign_configuration['General']['hp_selection'])
+
         # Check that if Extrapolation is selected, extrapolation_columns is specified
         if self._campaign_configuration['General']['validation'] == "Extrapolation":
             if "extrapolation_columns" not in self._campaign_configuration['General']:

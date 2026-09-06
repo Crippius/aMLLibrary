@@ -45,6 +45,11 @@ class RegressionInputs:
     scaled_columns: list of strings
         The list of columns which have been scaled
 
+    groups: pandas.Series or None
+        For windowed time series input, the series identifier each row (window) was cut from,
+        aligned to data.index. None for non-windowed input or windowed input without a series_id_column.
+        Used to keep all windows of a series on the same side of a train/validation split.
+
     Methods
     -------
     _get_data()
@@ -60,7 +65,7 @@ class RegressionInputs:
         Hidden method that actually performs the copy
 
     """
-    def __init__(self, data, inputs_split, x_cols, y_column):
+    def __init__(self, data, inputs_split, x_cols, y_column, groups=None):
         """
         Parameters
         data: dataframe
@@ -74,6 +79,9 @@ class RegressionInputs:
 
         y_column: string
             The label of the y column
+
+        groups: pandas.Series or None
+            Series identifier per row, aligned to data.index (see class docstring)
         """
         self.data = data
         self.inputs_split = inputs_split
@@ -81,11 +89,13 @@ class RegressionInputs:
         self.scalers = {}
         self.y_column = y_column
         self.scaled_columns = []
+        self.groups = groups
 
     def __copy__(self):
         new_copy = RegressionInputs(self.data.copy(), self.inputs_split.copy(), self.x_columns.copy(), self.y_column)
         new_copy.scalers = self.scalers.copy()
         new_copy.scaled_columns = self.scaled_columns.copy()
+        new_copy.groups = self.groups.copy() if self.groups is not None else None
         return new_copy
 
     def copy(self):

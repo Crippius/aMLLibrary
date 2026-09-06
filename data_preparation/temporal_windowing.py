@@ -87,7 +87,8 @@ class TemporalWindowing(data_preparation.data_preparation.DataPreparation):
             group_iter = [(None, df)]
 
         rows = []
-        for _, group_df in group_iter:
+        group_labels = []
+        for gid, group_df in group_iter:
             n = len(group_df)
             for start in range(0, n - window_size + 1, stride):
                 window = group_df.iloc[start:start + window_size]
@@ -113,6 +114,7 @@ class TemporalWindowing(data_preparation.data_preparation.DataPreparation):
                             row[f'{col}_step_{i}'] = val
 
                 rows.append(row)
+                group_labels.append(gid)
 
         new_df = pd.DataFrame(rows).reset_index(drop=True)
         new_x_cols = [c for c in new_df.columns if c != y_col]
@@ -124,4 +126,9 @@ class TemporalWindowing(data_preparation.data_preparation.DataPreparation):
         self._logger.info("TemporalWindowing: %d windows from %d time steps (window_size=%d, stride=%d)",
                           len(new_df), len(df), window_size, stride)
 
-        return regression_inputs.RegressionInputs(new_df, new_inputs_split, new_x_cols, y_col)
+        result = regression_inputs.RegressionInputs(new_df, new_inputs_split, new_x_cols, y_col)
+        if series_id_col and series_id_col in df.columns:
+            result.groups = pd.Series(group_labels, index=new_df.index)
+            self._logger.info("TemporalWindowing: recorded per-window group labels for %d series (column '%s')",
+                              result.groups.nunique(), series_id_col)
+        return result
