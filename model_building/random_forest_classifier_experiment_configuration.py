@@ -76,6 +76,7 @@ class RandomForestClassifierExperimentConfiguration(ec.ExperimentConfiguration):
         signature.append("n_estimators_" + str(self._hyperparameters['n_estimators']))
         signature.append("criterion_" + str(self._hyperparameters['criterion']))
         signature.append("max_depth_" + str(self._hyperparameters['max_depth']))
+        signature.append("class_weight_" + str(self._hyperparameters['class_weight']))
 
         return signature
 
@@ -98,7 +99,8 @@ class RandomForestClassifierExperimentConfiguration(ec.ExperimentConfiguration):
             self._regressor = rf.RandomForestClassifier(
                 n_estimators=self._hyperparameters['n_estimators'],
                 criterion=self._hyperparameters['criterion'],
-                max_depth=self._hyperparameters['max_depth'])
+                max_depth=self._hyperparameters['max_depth'],
+                class_weight=self._hyperparameters['class_weight'])
 
     def get_default_parameters(self):
         """
@@ -106,7 +108,8 @@ class RandomForestClassifierExperimentConfiguration(ec.ExperimentConfiguration):
         """
         return {'n_estimators': 100,
                 'criterion': 'gini',
-                'max_depth': None}
+                'max_depth': None,
+                'class_weight': None}
 
     def repair_hyperparameters(self, hypers):
         """

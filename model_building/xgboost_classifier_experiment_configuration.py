@@ -82,6 +82,7 @@ class XGBoostClassifierExperimentConfiguration(ec.ExperimentConfiguration):
         signature.append("n_estimators_" + str(self._hyperparameters['n_estimators']))
         signature.append("learning_rate_" + str(self._hyperparameters['learning_rate']))
         signature.append("max_depth_" + str(self._hyperparameters['max_depth']))
+        signature.append("scale_pos_weight_" + str(self._hyperparameters['scale_pos_weight']))
 
         return signature
 
@@ -142,6 +143,7 @@ class XGBoostClassifierExperimentConfiguration(ec.ExperimentConfiguration):
             pars = dict(n_estimators=self._hyperparameters['n_estimators'],
                         learning_rate=self._hyperparameters['learning_rate'],
                         max_depth=self._hyperparameters['max_depth'],
+                        scale_pos_weight=self._hyperparameters['scale_pos_weight'],
                         tree_method="hist", objective='binary:logistic', n_jobs=1)
             if self._disable_model_parallelism:
                 self._regressor = xgb.XGBClassifier(nthread=1, **pars)
@@ -156,7 +158,8 @@ class XGBoostClassifierExperimentConfiguration(ec.ExperimentConfiguration):
         """
         return {'learning_rate': 0.1,
                 'max_depth': 6,
-                'n_estimators': 100}
+                'n_estimators': 100,
+                'scale_pos_weight': 1}
 
     def repair_hyperparameters(self, hypers):
         """
