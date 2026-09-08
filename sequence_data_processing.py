@@ -164,7 +164,7 @@ class SequenceDataProcessing:
             sys.exit(1)
 
         # Check that if HoldOut is selected, hold_out_ratio is specified
-        if self._campaign_configuration['General']['validation'] == "HoldOut" or self._campaign_configuration['General'].get('hp_selection') == "HoldOut":
+        if self._campaign_configuration['General']['validation'] == "HoldOut" or self._campaign_configuration['General']['hp_selection'] == "HoldOut":
             if "hold_out_ratio" not in self._campaign_configuration['General']:
                 self._logger.error("hold_out_ratio not set")
                 sys.exit(1)

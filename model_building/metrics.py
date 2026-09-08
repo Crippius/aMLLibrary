@@ -15,16 +15,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss, root_mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss
 import numpy as np
 
 
 def mean_absolute_percentage_error(y_true, y_pred):
     epsilon = np.finfo(np.float64).eps
-    if len(y_true.shape) == 1:
-        y_true = y_true.values.reshape(y_true.shape[0],1)
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    if y_true.ndim == 1:
+        y_true = y_true.reshape(-1, 1)
+    if y_pred.ndim == 1:
+        y_pred = y_pred.reshape(-1, 1)
     mape = np.abs(y_pred - y_true) / np.maximum(np.abs(y_true), epsilon)
     return np.average(np.average(mape, axis=0), axis = 0)
+
+
+def root_mean_squared_error(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred) ** 0.5
 
 
 class Metrics:

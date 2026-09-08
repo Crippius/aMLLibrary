@@ -40,7 +40,6 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
              {'quantile': {'q': 0.25}},
              {'autocorrelation': {'f_agg': 'mean',   'maxlag': 3}},
              {'autocorrelation': {'f_agg': 'median', 'maxlag': 3}},
-             {'linear_trend': {'attr': 'slope', 'chunk_len': 5, 'f_agg': 'mean'}},
              {'agg_linear_trend': {'attr': ['slope', 'intercept'], 'chunk_len': [2, 5], 'f_agg': 'mean'}},
             ]
 
@@ -51,7 +50,7 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
 
     def process(self, inputs):
         wf = self._campaign_configuration.get('WindowFeatures', {})
-        raw_features = wf.get('features', ['mean', 'std', 'min', 'max'])
+        raw_features = wf.get('features', ['mean', 'standard_deviation', 'minimum', 'maximum'])
         features = self._normalize_features(raw_features)
 
         y_col = self._campaign_configuration['General']['y']
@@ -149,14 +148,6 @@ class WindowFeatureExtraction(data_preparation.data_preparation.DataPreparation)
                 maxlag = p['maxlag']
                 result = self._autocorrelation(vals, f_agg, maxlag)
                 out[f'{col}_autocorrelation_{f_agg}_{maxlag}'] = result
-
-        elif feat_name == 'linear_trend':
-            for p in (params or []):
-                attr = p['attr']
-                chunk_len = p['chunk_len']
-                f_agg = p['f_agg']
-                result = self._linear_trend(vals, window_size, attr, chunk_len, f_agg)
-                out[f'{col}_linear_trend_{attr}_{chunk_len}_{f_agg}'] = result
 
         elif feat_name == 'agg_linear_trend':
             for p in (params or []):
