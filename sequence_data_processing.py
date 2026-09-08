@@ -221,7 +221,7 @@ class SequenceDataProcessing:
             sys.exit(1)
 
         # Check that the required metric for comparison is valid for the task at hand
-        accepted_metrics = ["Accuracy", "F1"] if task == "classification" else ["MAPE", "RMSE", "R^2", "MAE", "MSE", "QL"]
+        accepted_metrics = ["Accuracy", "F1", "Precision", "Recall", "BalancedAccuracy"] if task == "classification" else ["MAPE", "RMSE", "R^2", "MAE", "MSE", "QL"]
         if self._campaign_configuration['General']['metric'] not in accepted_metrics:
             self._logger.error("Invalid metric: %s. The accepted values for %s are: %s",
                                self._campaign_configuration['General']['metric'], task, ", ".join(accepted_metrics))

@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_pinball_loss
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, precision_score, recall_score
 import numpy as np
 
 
@@ -40,12 +40,33 @@ def to_labels(y):
     return np.asarray(y).ravel().astype(int)
 
 
+def _average_for(y_true, y_pred):
+    # binary or multiclass output
+    n_classes = np.unique(np.concatenate([y_true, y_pred])).size
+    return "binary" if n_classes <= 2 else "macro"
+
+
 def accuracy(y_true, y_pred):
     return accuracy_score(to_labels(y_true), to_labels(y_pred))
 
 
+def balanced_accuracy(y_true, y_pred):
+    return balanced_accuracy_score(to_labels(y_true), to_labels(y_pred))
+
+
 def f1(y_true, y_pred):
-    return f1_score(to_labels(y_true), to_labels(y_pred), zero_division=0)
+    yt, yp = to_labels(y_true), to_labels(y_pred)
+    return f1_score(yt, yp, average=_average_for(yt, yp), zero_division=0)
+
+
+def precision(y_true, y_pred):
+    yt, yp = to_labels(y_true), to_labels(y_pred)
+    return precision_score(yt, yp, average=_average_for(yt, yp), zero_division=0)
+
+
+def recall(y_true, y_pred):
+    yt, yp = to_labels(y_true), to_labels(y_pred)
+    return recall_score(yt, yp, average=_average_for(yt, yp), zero_division=0)
 
 
 class Metrics:
@@ -90,6 +111,21 @@ class Metrics:
             },
             "F1": {
               "func": f1,
+              "attributes": {},
+              "comp": (lambda x,y : x > y)  # greater is better
+            },
+            "Precision": {
+              "func": precision,
+              "attributes": {},
+              "comp": (lambda x,y : x > y)  # greater is better
+            },
+            "Recall": {
+              "func": recall,
+              "attributes": {},
+              "comp": (lambda x,y : x > y)  # greater is better
+            },
+            "BalancedAccuracy": {
+              "func": balanced_accuracy,
               "attributes": {},
               "comp": (lambda x,y : x > y)  # greater is better
             }

@@ -23,7 +23,7 @@ For usage examples of the listed options, please check the configuration files i
 | `run_num`  | integer | number of runs for the given experiment campaign | |
 | `task` | string | type of learning task | can be `regression` (default) or `classification` |
 | `techniques` | list of strings | list of techniques to be used | regression: `DecisionTree`, `LRRidge`, `NeuralNetwork`, `NNLS`, `RandomForest`, `Stepwise`, `SVR`, `XGBoost`; classification: `LogisticRegression`, `RandomForestClassifier`, `XGBoostClassifier` |
-| `metric` | string | metric used to compare models | regression: `MAPE` (default), `RMSE`, `R^2`, `MAE`, `MSE`, `QL`; classification: `F1` (default), `Accuracy` |
+| `metric` | string | metric used to compare models | regression: `MAPE` (default), `RMSE`, `R^2`, `MAE`, `MSE`, `QL`; classification: `F1` (default), `Accuracy`, `Precision`, `Recall`, `BalancedAccuracy` |
 | `y` | string | name of the column which will be the regression/classification target | |
 | `hyperparameter_tuning` | string | hyperparameter tuning method to be used | default: grid search, set to `Hyperopt` to use Bayesian Optimization instead (see [below](#hyperopt)) |
 | `hyperopt_max_evals` | integer | maximum iterations for Bayesian Optimization | used with `Hyperopt` |
